@@ -1,4 +1,4 @@
-//ALUNAS: Beatrice Fischer e Gabriele Maria Freiberger
+//ALUNAS: Beatrice Fischer, Gabriele Maria Freiberger, Raul Schmitz, Gustavo Hreczuck
 
 using ApiClinica.Data;
 using Microsoft.EntityFrameworkCore;
