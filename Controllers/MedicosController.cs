@@ -14,8 +14,6 @@ public class MedicoController : ControllerBase
     {
         _context = context;
     }
-    private static List<Medico> medicos = new();
-    private static int _nextId = 1;
 
     // GET: api/medico
     [HttpGet]
@@ -41,7 +39,6 @@ public class MedicoController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateMedico([FromBody] Medico medico)
     {
-        medico.Id = _nextId++;
 
         _context.Medicos.Add(medico);
         await _context.SaveChangesAsync();

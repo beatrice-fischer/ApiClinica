@@ -12,7 +12,6 @@ builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite("Data S
 var app = builder.Build();
 
 app.UseHttpsRedirection();
-app.UseAuthorization();
 app.MapControllers();
 
 app.Run();

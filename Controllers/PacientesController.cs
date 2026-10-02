@@ -15,8 +15,6 @@ public class PacienteController : ControllerBase
     {
         _context = context;
     }
-    private static List<Paciente> pacientes = new();
-    private static int _nextId = 1;
 
     // GET: api/paciente
     [HttpGet]
@@ -28,7 +26,7 @@ public class PacienteController : ControllerBase
             .Select(p => PacienteMapper.ToDTO(p))
             .ToList();
 
-        return Ok(pacientes);
+        return Ok(pacientesDTO);
     }
 
     // GET: api/paciente/id
@@ -53,8 +51,6 @@ public class PacienteController : ControllerBase
         }
 
         var paciente = PacienteMapper.ToModel(dto);
-
-        paciente.Id = _nextId++;
 
         _context.Pacientes.Add(paciente);
         await _context.SaveChangesAsync();

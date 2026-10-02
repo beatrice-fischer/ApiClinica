@@ -14,9 +14,6 @@ public class ConsultaController : ControllerBase
     {
         _context = context;
     }
-    private static List<Consulta> consultas = new();
-    private static int _nextId = 1;
-
     // GET: api/consulta
     [HttpGet]
     public async Task<IActionResult> GetConsultas()
@@ -41,12 +38,10 @@ public class ConsultaController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateConsulta([FromBody] Consulta consulta)
     {
-        var erro = ValidarConsulta(consulta);
+        var erro = await ValidarConsulta(consulta);
 
         if (erro != null)
             return BadRequest(new { mensagem = erro });
-
-        consulta.Id = _nextId++;
 
         _context.Consultas.Add(consulta);
         await _context.SaveChangesAsync();
@@ -66,7 +61,7 @@ public class ConsultaController : ControllerBase
         if (existente == null)
             return NotFound();
 
-        var erro = ValidarConsulta(consulta, Id);
+        var erro = await ValidarConsulta(consulta, Id);
 
         if (erro != null)
             return BadRequest(new {mensagem = erro});
