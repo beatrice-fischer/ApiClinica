@@ -68,7 +68,7 @@ public class ConsultaController : ControllerBase
 
         existente.PacienteId = consulta.PacienteId; //atualiza os campos
         existente.MedicoId = consulta.MedicoId;
-        existente.Data = consulta.Data;
+        existente.DataHora = consulta.DataHora;
 
         await _context.SaveChangesAsync();
 
@@ -91,7 +91,7 @@ public class ConsultaController : ControllerBase
     //VALIDAÇÃO das regras
     private async Task<string?> ValidarConsulta(Consulta consulta, int? idIgnorar = null)
     {
-        if (consulta.Data < DateTime.Now)
+        if (consulta.DataHora < DateTime.Now)
         {
             return "Não é possível agendar uma consulta em uma data/horário no passado.";
         }
@@ -99,7 +99,7 @@ public class ConsultaController : ControllerBase
         bool conflitoMedico = await _context.Consultas.AnyAsync(c =>
             c.Id != idIgnorar &&
             c.MedicoId == consulta.MedicoId &&
-            c.Data == consulta.Data);
+            c.DataHora == consulta.DataHora);
 
         if (conflitoMedico)
         {
@@ -109,7 +109,7 @@ public class ConsultaController : ControllerBase
         bool conflitoPaciente = await _context.Consultas.AnyAsync(c =>
             c.Id != idIgnorar &&
             c.PacienteId == consulta.PacienteId &&
-            c.Data == consulta.Data);
+            c.DataHora == consulta.DataHora);
 
         if (conflitoPaciente)
         {
