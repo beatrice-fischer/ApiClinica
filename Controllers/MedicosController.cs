@@ -7,10 +7,10 @@ namespace ApiClinica.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class MedicoController : ControllerBase
+public class MedicosController : ControllerBase
 {
     private readonly AppDbContext _context;
-    public MedicoController(AppDbContext context)
+    public MedicosController(AppDbContext context)
     {
         _context = context;
     }
