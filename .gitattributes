@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# O banco e binario: impede que o Git normalize quebras de linha e corrompa o arquivo
+*.db binary

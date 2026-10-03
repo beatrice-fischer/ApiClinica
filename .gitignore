@@ -1,4 +1,31 @@
-bin/ 
-obj/
+## Build / saida de compilacao
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## Visual Studio / Rider / VS Code
 .vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Banco SQLite local
 *.db
+*.db-shm
+*.db-wal
+
+## NuGet
+*.nupkg
+*.snupkg
+packages/
+!packages/build/
+
+## Sistema operacional
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
