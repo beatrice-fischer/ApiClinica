@@ -6,7 +6,6 @@ public class MedicoUpdateDTO
     public string? Nome { get; set; }
     [EmailAddress(ErrorMessage = "E-mail inválido.")]
     public string? Email { get; set; }
-    [TelephoneNumber(ErrorMessage = "Numero de telefone inválido.")]
     public string? Telefone { get; set; }
     public string? CRM { get; set; }
 }
