@@ -1,6 +1,6 @@
 public class ConsultaUpdateDTO
 {
-    public required int PacienteId { get; set; }
-    public required int MedicoId { get; set; }
-    public required DateTime Data { get; set; }
+    public int? PacienteId { get; set; }
+    public int? MedicoId { get; set; }
+    public DateTime? DataHora { get; set; }
 }
