@@ -1,13 +1,12 @@
 // Função TelephoneNumber e EmailAddress AINDA NÃO EXISTEM precisam ser criadads posteriormente//
-
 using System.ComponentModel.DataAnnotations;
 
-public class MedicoCreateDTO
+public class MedicoUpdateDTO
 {
-    public required string Nome { get; set; }
+    public string? Nome { get; set; }
     [EmailAddress(ErrorMessage = "E-mail inválido.")]
-    public required string Email { get; set; }
+    public string? Email { get; set; }
     [TelephoneNumber(ErrorMessage = "Numero de telefone inválido.")]
-    public required string Telefone { get; set; }
-    public required string CRM { get; set; }
+    public string? Telefone { get; set; }
+    public string? CRM { get; set; }
 }
