@@ -4,9 +4,9 @@ namespace ApiClinica.Mappers;
 
 public static class MedicoMapper
 {
-    public static CreateMedicoDTO ToEntity(MedicoCreateDTO dto)
+    public static MedicoCreateDTO ToEntity(MedicoCreateDTO dto)
     {
-        return new Medico
+        return new MedicoCreateDTO
         {
             Nome = dto.Nome,
             Email = dto.Email,
@@ -26,11 +26,11 @@ public static class MedicoMapper
             CRM = medico.CRM,
         };
     }
-    public static void ApplyUpdate (MedicoUpdateDTO dto, medico entidade)
+    public static void ApplyUpdate (MedicoUpdateDTO dto, Medico entidade)
     {
         if (dto.Nome is not null) entidade.Nome = dto.Nome;
         if (dto.Email is not null) entidade.Email = dto.Email;
         if (dto.Telefone is not null) entidade.Telefone = dto.Telefone;
-        if (dto.CRM is not null) entidade.CRM = dto.CRM.int;
+        if (dto.CRM is not null) entidade.CRM = dto.CRM;
     }
 }
