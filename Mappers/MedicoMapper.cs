@@ -4,18 +4,18 @@ namespace ApiClinica.Mappers;
 
 public static class MedicoMapper
 {
-    public static MedicoCreateDTO ToEntity(MedicoCreateDTO dto)
+    public static Medico ToEntity(MedicoCreateDTO dto)
     {
-        return new MedicoCreateDTO
+        return new Medico
         {
             Nome = dto.Nome,
             Email = dto.Email,
             Telefone = dto.Telefone,
-            CRM = dto.CRM,
+            CRM = dto.CRM
         };
     }
 
-    public static MedicoReadDTO toReadDTO(Medico medico)
+    public static MedicoReadDTO ToReadDTO(Medico medico)
     {
         return new MedicoReadDTO
         {
@@ -23,7 +23,7 @@ public static class MedicoMapper
             Nome = medico.Nome,
             Email = medico.Email,
             Telefone = medico.Telefone,
-            CRM = medico.CRM,
+            CRM = medico.CRM
         };
     }
     public static void ApplyUpdate (MedicoUpdateDTO dto, Medico entidade)

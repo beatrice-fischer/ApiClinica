@@ -4,9 +4,9 @@ namespace ApiClinica.Mappers;
 
 public static class ConsultaMapper
 {
-    public static ConsultaCreateDTO ToEntity(ConsultaCreateDTO dto)
+    public static Consulta ToEntity(ConsultaCreateDTO dto)
     {
-        return new ConsultaCreateDTO
+        return new Consulta
         {
             PacienteId = dto.PacienteId,
             MedicoId = dto.MedicoId,
@@ -14,22 +14,22 @@ public static class ConsultaMapper
         };
     }
 
-    public static ConsultaReadDTO ToReadDTO(Consulta c)
+    public static ConsultaReadDTO ToReadDTO(Consulta consulta)
     {
         return new ConsultaReadDTO
         {
-            Id = c.Id,
-            PacienteId = c.PacienteId,
-            MedicoId = c.MedicoId,
-            DataHora = c.DataHora
+            Id = consulta.Id,
+            PacienteId = consulta.PacienteId,
+            MedicoId = consulta.MedicoId,
+            DataHora = consulta.DataHora
         };
     }
 
-    public static void ApplyUpdate(ConsultaUpdateDTO dto, Consulta c)
+    public static void ApplyUpdate(ConsultaUpdateDTO dto, Consulta entidade)
     {
-        if (dto.PacienteId is not null) c.PacienteId = dto.PacienteId.Value;
-        if (dto.MedicoId is not null) c.MedicoId = dto.MedicoId.Value;
-        if (dto.DataHora is not null) c.DataHora = dto.DataHora.Value;
+        if (dto.PacienteId is not null) entidade.PacienteId = dto.PacienteId.Value;
+        if (dto.MedicoId is not null) entidade.MedicoId = dto.MedicoId.Value;
+        if (dto.DataHora is not null) entidade.DataHora = dto.DataHora.Value;
 
     }
 }

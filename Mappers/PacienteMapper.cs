@@ -4,9 +4,9 @@ namespace ApiClinica.Mappers;
 
 public static class PacienteMapper
 {
-    public static PacienteCreateDTO ToEntity(PacienteCreateDTO dto)
+    public static Paciente ToEntity(PacienteCreateDTO dto)
     {
-        return new PacienteCreateDTO
+        return new Paciente
         {
             Nome = dto.Nome,
             Email = dto.Email,
@@ -25,6 +25,7 @@ public static class PacienteMapper
             Email = paciente.Email,
             Telefone = paciente.Telefone,
             DataNasc = paciente.DataNasc
+            //Paciente não possui CPF no DTO de leitura, então não incluímos aqui
         };
     }
     public static void ApplyUpdate (PacienteUpdateDTO dto, Paciente entidade)
