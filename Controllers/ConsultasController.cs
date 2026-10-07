@@ -5,8 +5,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ApiClinica.Controllers;
 
+public const int DuracaoConsultaMinutos = 30;
+
 [ApiController]
 [Route("api/[controller]")]
+
 public class ConsultasController : ControllerBase
 {
 
