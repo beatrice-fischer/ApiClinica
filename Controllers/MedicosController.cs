@@ -1,8 +1,3 @@
-using Microsoft.AspNetCore.Mvc;
-using ApiClinica.Models;
-using ApiClinica.Data;
-using Microsoft.EntityFrameworkCore;
-
 namespace ApiClinica.Controllers;
 
 [ApiController]
@@ -19,49 +14,66 @@ public class MedicosController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetMedicos()
     {
-        var medicos = await _context.Medicos.ToListAsync();
-        return Ok(medicos);
+        var medicos = await _context.Medicos.ToListAsync(); // Busca todos os médicos no banco
+
+        var medicosDTO = medicos // Converte cada entidade em DTO de leitura
+            .Select(m => MedicoMapper.ToReadDTO(m))
+            .ToList();
+
+        return Ok(medicosDTO);
     }
 
     // GET: api/medico/id
     [HttpGet("{id}")]
     public async Task<IActionResult> GetMedicoById(int id)
     {
-        var medico = await _context.Medicos.FindAsync(id);
+        var medico = await _context.Medicos.FindAsync(id); // Busca o médico pelo Id
 
-        if (medico == null)
+        if (medico == null) // 404 se não existir
             return NotFound();
 
-        return Ok(medico);
+        return Ok(MedicoMapper.ToReadDTO(medico)); // Devolve o DTO de leitura
     }
 
     // POST: api/medico
     [HttpPost]
-    public async Task<IActionResult> CreateMedico([FromBody] Medico medico)
+    public async Task<IActionResult> CreateMedico([FromBody] MedicoCreateDTO dto)
     {
+        // Valida e-mail e telefone (para na primeira falha)
+        var erro = ValidarEmail(dto.Email) ?? ValidarTelefone(dto.Telefone);
 
-        _context.Medicos.Add(medico);
+        if (erro != null)
+            return BadRequest(new { message = erro });
+
+        var medico = MedicoMapper.ToEntity(dto); // Converte o DTO em entidade
+
+        _context.Medicos.Add(medico); // Salva no banco
         await _context.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetMedicoById), new { id = medico.Id }, medico);
+
+        // 201 com o DTO de leitura e o link do GET por Id
+        return CreatedAtAction(nameof(GetMedicoById), new { id = medico.Id }, MedicoMapper.ToReadDTO(medico));
     }
 
-    // PUT: api/medico
-    [HttpPut]
-    public async Task<IActionResult> UpdateMedico(int Id, [FromBody] Medico medico)
+    // PATCH: api/medicos/id
+    [HttpPatch("{id}")]
+    public async Task<IActionResult> UpdateMedico(int id, [FromBody] MedicoUpdateDTO dto)
     {
-        if (Id != medico.Id)
-        {
-            return BadRequest("O ID da URL não confere com o ID do corpo da requisição.");
-        }
-
-        var existente = await _context.Medicos.FindAsync(Id); //busca
+        var existente = await _context.Medicos.FindAsync(id); //Busca o médico
         if (existente == null)
             return NotFound();
 
-        existente.Nome = medico.Nome; //atualiza os campos
-        existente.Email = medico.Email;
-        existente.Telefone = medico.Telefone;
-        existente.CRM = medico.CRM;
+        string? erro = null; //Valida campos que foram alterados
+
+        if (dto.Email is not null)
+            erro = ValidarEmail(dto.Email);
+
+        if (erro == null && dto.Telefone is not null)
+            erro = ValidarTelefone(dto.Telefone);
+
+        if (erro != null)   
+            return BadRequest(new { message = erro });
+
+        MedicoMapper.ApplyUpdateDTO(existente, dto); // atualiza apenas os campos não nulos
 
         await _context.SaveChangesAsync();
 
@@ -69,15 +81,50 @@ public class MedicosController : ControllerBase
     }
 
     // DELETE: api/medico/id
-    [HttpDelete("{Id}")]
-    public async Task<IActionResult> DeleteMedico(int Id)
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteMedico(int id)
     {
-        var medico = await _context.Medicos.FindAsync(Id); //busca
+        var medico = await _context.Medicos.FindAsync(id); // Busca o médico
         if (medico == null)
             return NotFound();
 
-        _context.Medicos.Remove(medico);
+        // Verifica se há consultas futuras desse médico
+        bool temConsultaFutura = await _context.Consultas.AnyAsync(c =>
+            c.MedicoId == id && c.DataHora > DateTime.Now);
+
+        if (temConsultaFutura) // Bloqueia a exclusão com 409 Conflict
+        {
+            return Conflict(new { message = "Não é possível excluir o médico, pois ele possui consultas futuras agendadas." });
+        }
+
+        _context.Medicos.Remove(medico); // Remove do banco
         await _context.SaveChangesAsync();
         return NoContent();
     }
+
+    // VALIDAÇÕES - email e telefone
+    private static string? ValidarEmail(string? email)
+    {
+        // Rejeita e-mail vazio, só com espaços ou em formato inválido
+        if (string.IsNullOrWhiteSpace(email) || !new EmailAddressAttribute().IsValid(email))
+        {
+            return "E-mail inválido.";
+        }
+ 
+        return null;
+    }
+
+    private static string? ValidarTelefone(string? telefone)
+    {
+        // Rejeita telefone vazio, só com espaços ou em formato inválido
+        if (string.IsNullOrWhiteSpace(telefone) || !TelefoneRegex.IsMatch(telefone.Trim()))
+        {
+            return "Telefone inválido. Use DDD com 2 dígitos e número com 8 ou 9 dígitos, ex.: (47) 98888-8888.";
+        }
+        // Aceita celular (11 dígitos) ou fixo (10 dígitos) com DDD de 2 dígitos,
+        // com ou sem parênteses, espaço e hífen. Ex.: (47)988888888, (47) 98888-8888, 47988888888
+ 
+        return null;
+    }
+
 }
