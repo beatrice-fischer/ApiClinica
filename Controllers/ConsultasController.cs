@@ -5,10 +5,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ApiClinica.Controllers;
 
+public const int DuracaoConsultaMinutos = 30;
+
 [ApiController]
 [Route("api/[controller]")]
+
 public class ConsultasController : ControllerBase
 {
+
+    private const int DuracaoConsultaMinutos = 30;
+
     private readonly AppDbContext _context;
     public ConsultasController(AppDbContext context)
     {
@@ -38,10 +44,10 @@ public class ConsultasController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateConsulta([FromBody] Consulta consulta)
     {
-        var erro = await ValidarConsulta(consulta);
+        var erro = await ValidarConsulta(consulta.PacienteId, consulta.MedicoId, consulta.DataHora);
 
         if (erro != null)
-            return BadRequest(new { mensagem = erro });
+            return erro;
 
         _context.Consultas.Add(consulta);
         await _context.SaveChangesAsync();
@@ -61,10 +67,10 @@ public class ConsultasController : ControllerBase
         if (existente == null)
             return NotFound();
 
-        var erro = await ValidarConsulta(consulta, Id);
+        var erro = await ValidarConsulta(consulta.PacienteId, consulta.MedicoId, consulta.DataHora, Id);
 
         if (erro != null)
-            return BadRequest(new {mensagem = erro});
+            return erro;
 
         existente.PacienteId = consulta.PacienteId; //atualiza os campos
         existente.MedicoId = consulta.MedicoId;
@@ -88,36 +94,54 @@ public class ConsultasController : ControllerBase
         return NoContent();
     }
 
-    //VALIDAÇÃO das regras
-    private async Task<string?> ValidarConsulta(Consulta consulta, int? idIgnorar = null)
+    //================================================================
+    //  VALIDAÇÃO das regras DE NEGÓCIO para agendamento de consultas
+    //================================================================
+    private async Task<IActionResult?> ValidarConsulta(
+        int pacienteId,
+        int medicoId,
+        DateTime dataHora,
+        int? idIgnorar = null)
     {
-        if (consulta.DataHora < DateTime.Now)
-        {
-            return "Não é possível agendar uma consulta em uma data/horário no passado.";
-        }
+        //VALIDAÇÃO do ID de paciente
+        var paciente = await _context.Pacientes.FindAsync(pacienteId);
+        if (paciente is null)
+            return BadRequest(new { mensagem = $"Paciente {pacienteId} não encontrado." });
 
+        //VALIDAÇÃO do ID de médico
+        var medico = await _context.Medicos.FindAsync(medicoId);
+        if (medico is null)
+            return BadRequest(new { mensagem = $"Médico {medicoId} não encontrado." });
+
+        //VALIDAÇÃO da data
+        if (dataHora < DateTime.Now)
+            return BadRequest(new { mensagem = "Não é possível agendar uma consulta em uma data/horário no passado." });
+
+        //VALIDAÇÃO de conflito de horário (janela de 30 minutos antes e depois da consulta)
+        var inicioJanela = dataHora.AddMinutes(-DuracaoConsultaMinutos);
+        var fimJanela    = dataHora.AddMinutes(DuracaoConsultaMinutos);
+
+        //VALIDAÇÃO de conflito na agenda do médico
         bool conflitoMedico = await _context.Consultas.AnyAsync(c =>
-            c.Id != idIgnorar &&
-            c.MedicoId == consulta.MedicoId &&
-            c.DataHora == consulta.DataHora);
+            (idIgnorar == null || c.Id != idIgnorar) &&
+            c.MedicoId == medicoId &&
+            //Não utilizar >= e <= para evitar conflito de horário com consultas que iniciam ou terminam no mesmo horário
+            c.DataHora > inicioJanela &&
+            c.DataHora < fimJanela);
 
         if (conflitoMedico)
-        {
-            return "Este médico já possui uma consulta marcada para este mesmo horário.";
-        }
+            return Conflict(new { mensagem = $"Este médico possui consulta em horário conflitante (intervalo mínimo de {DuracaoConsultaMinutos} minutos)." });
 
+        //VALIDAÇÃO de conflito na agenda do paciente
         bool conflitoPaciente = await _context.Consultas.AnyAsync(c =>
-            c.Id != idIgnorar &&
-            c.PacienteId == consulta.PacienteId &&
-            c.DataHora == consulta.DataHora);
+            (idIgnorar == null || c.Id != idIgnorar) &&
+            c.PacienteId == pacienteId &&
+            //Não utilizar >= e <= para evitar conflito de horário com consultas que iniciam ou terminam no mesmo horário
+            c.DataHora > inicioJanela &&
+            c.DataHora < fimJanela);
 
         if (conflitoPaciente)
-        {
-            return "Este paciente já possui uma consulta marcada para este mesmo horário.";
-        }
-
-        await _context.Pacientes.FindAsync(consulta.PacienteId);
-        
+            return Conflict(new { mensagem = $"Este paciente possui consulta em horário conflitante (intervalo mínimo de {DuracaoConsultaMinutos} minutos)." });
 
         return null;
     }

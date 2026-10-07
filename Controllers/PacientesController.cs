@@ -23,8 +23,8 @@ public class PacientesController : ControllerBase
     {
         var pacientes = await _context.Pacientes.ToListAsync();
 
-        var pacientesDTO = pacientes //converte "pacientes" em DTO
-            .Select(p => PacienteMapper.ToDTO(p))
+        var pacientesDTO = pacientes
+            .Select(p => PacienteMapper.ToReadDTO(p))
             .ToList();
 
         return Ok(pacientesDTO);
@@ -40,7 +40,7 @@ public class PacientesController : ControllerBase
         if (paciente == null)
             return NotFound();
 
-        return Ok(PacienteMapper.ToDTO(paciente));
+        return Ok(PacienteMapper.ToReadDTO(paciente));
     }
 
     // POST: api/paciente
@@ -68,7 +68,7 @@ public class PacientesController : ControllerBase
         _context.Pacientes.Add(paciente);
         await _context.SaveChangesAsync();
 
-        var pacienteDTO = PacienteMapper.ToDTO(paciente);
+        var pacienteDTO = PacienteMapper.ToReadDTO(paciente);
         
         return CreatedAtAction(nameof(GetPacienteById), new { id = paciente.Id }, pacienteDTO);
     }
