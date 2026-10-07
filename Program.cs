@@ -1,4 +1,4 @@
-//ALUNAS: Beatrice Fischer, Gabriele Maria Freiberger, Lucas de Carvalho Ziele, Raul Schmitz, Gustavo Hreczuck
+//EQUIPE: Beatrice Fischer, Gabriele Maria Freiberger, Lucas de Carvalho Ziele, Raul Schmitz, Gustavo Hreczuck
 
 using ApiClinica.Data;
 using Microsoft.EntityFrameworkCore;
