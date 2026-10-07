@@ -1,5 +1,3 @@
-// Função TelephoneNumber e EmailAddress AINDA NÃO EXISTEM precisam ser criadads posteriormente//
-
 using System.ComponentModel.DataAnnotations;
 
 public class MedicoCreateDTO
