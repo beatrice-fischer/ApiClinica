@@ -18,6 +18,7 @@ public class PacientesController : ControllerBase
 
     // GET: api/paciente
     [HttpGet]
+    //método que busca os pacientes no banco
     public async Task<IActionResult> GetPacientes()
     {
         var pacientes = await _context.Pacientes.ToListAsync();
@@ -31,6 +32,7 @@ public class PacientesController : ControllerBase
 
     // GET: api/paciente/id
     [HttpGet("{id}")]
+    //método que busca o paciente no banco por ID
     public async Task<IActionResult> GetPacienteById(int id)
     {
         var paciente = await _context.Pacientes.FindAsync(id);
@@ -45,10 +47,21 @@ public class PacientesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreatePaciente([FromBody] PacienteCreateDTO dto)
     {
+        var erro = ValidarEmail(dto.Email) ?? ValidarTelefone(dto.Telefone);
+
+        if (erro!=null)
+        return BadRequest(new {message = erro});
+
         if (dto.DataNasc > DateOnly.FromDateTime(DateTime.Today))
         {
             return BadRequest(new { mensagem = "Data de nascimento não pode ser futura." });
         }
+
+        if (!CpfValidator.EhValido(dto.Cpf))
+        return BadRequest(new { mensagem = "CPF inválido." });
+
+        if (await _context.Pacientes.AnyAsync(p => p.Cpf == dto.Cpf))
+        return Conflict(new { mensagem = "Já existe um paciente com este CPF." });
 
         var paciente = PacienteMapper.ToEntity(dto);
 
@@ -60,33 +73,33 @@ public class PacientesController : ControllerBase
         return CreatedAtAction(nameof(GetPacienteById), new { id = paciente.Id }, pacienteDTO);
     }
 
-    // PUT: api/paciente
-    [HttpPut]
-    public async Task<IActionResult> UpdatePaciente(int Id, [FromBody] Paciente paciente)
+    // PATCH: api/paciente
+    [HttpPatch("{Id}")]
+    public async Task<IActionResult> PatchPaciente(int Id, [FromBody] PacienteUpdateDTO dto)
     {
-        if (Id != paciente.Id)
-        {
-            return BadRequest("O ID da URL não confere com o ID do corpo da requisição.");
-        }
+
+        ValidadorEmailTelefoneController.ValidarEmail(dto.Email);
+        
+        ValidadorEmailTelefoneController.ValidarTelefone(dto.Telefone);
+
+        if (!CpfValidator.EhValido(dto.Cpf))
+        return BadRequest(new { mensagem = "CPF inválido." });
 
         var existente = await _context.Pacientes.FindAsync(Id); //busca
         if (existente == null)
             return NotFound();
         
-        if (paciente.DataNasc > DateOnly.FromDateTime(DateTime.Today))
+        if (dto.DataNasc > DateOnly.FromDateTime(DateTime.Today))
         {
             return BadRequest(new { mensagem = "Data de nascimento não pode ser futura." });
         }
 
-        existente.Nome = paciente.Nome; //atualiza os campos
-        existente.Email = paciente.Email;
-        existente.Telefone = paciente.Telefone;
-        existente.DataNasc = paciente.DataNasc;
-        existente.Cpf = paciente.Cpf;
+
+        PacienteMapper.ApplyUpdate(dto, existente);
         
         await _context.SaveChangesAsync();
 
-        return NoContent();
+        return Ok(PacienteMapper.ToReadDTO(existente));
     }
 
     // DELETE: api/paciente/id
@@ -96,6 +109,14 @@ public class PacientesController : ControllerBase
         var paciente = await _context.Pacientes.FindAsync(Id);
         if (paciente == null)
             return NotFound();
+
+        bool temConsultaFutura = await _context.Consultas.AnyAsync(c =>
+        c.PacienteId == Id && c.DataHora > DateTime.Now);
+
+        if (temConsultaFutura)
+        {
+            return Conflict(new { message = "Não é possível excluir o paciente, existem consultas futuras agendadas." });
+        }
 
         _context.Pacientes.Remove(paciente);
         await _context.SaveChangesAsync();
