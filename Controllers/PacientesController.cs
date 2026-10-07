@@ -3,6 +3,7 @@ using ApiClinica.Models;
 using ApiClinica.Data;
 using Microsoft.EntityFrameworkCore;
 using ApiClinica.Mappers;
+using ApiClinica.Validators;
 
 namespace ApiClinica.Controllers;
 
@@ -47,10 +48,10 @@ public class PacientesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreatePaciente([FromBody] PacienteCreateDTO dto)
     {
-        var erro = ValidarEmail(dto.Email) ?? ValidarTelefone(dto.Telefone);
+        var erro = ContatoValidator.ValidarEmail(dto.Email) ?? ContatoValidator.ValidarTelefone(dto.Telefone);
 
-        if (erro!=null)
-        return BadRequest(new {message = erro});
+        if (erro != null)
+            return BadRequest(new { mensagem = erro });
 
         if (dto.DataNasc > DateOnly.FromDateTime(DateTime.Today))
         {
@@ -73,30 +74,30 @@ public class PacientesController : ControllerBase
         return CreatedAtAction(nameof(GetPacienteById), new { id = paciente.Id }, pacienteDTO);
     }
 
-    // PATCH: api/paciente
-    [HttpPatch("{Id}")]
-    public async Task<IActionResult> PatchPaciente(int Id, [FromBody] PacienteUpdateDTO dto)
+    // PATCH: api/pacientes/id
+    [HttpPatch("{id}")]
+    public async Task<IActionResult> PatchPaciente(int id, [FromBody] PacienteUpdateDTO dto)
     {
-
-        ValidadorEmailTelefoneController.ValidarEmail(dto.Email);
-        
-        ValidadorEmailTelefoneController.ValidarTelefone(dto.Telefone);
-
-        if (!CpfValidator.EhValido(dto.Cpf))
-        return BadRequest(new { mensagem = "CPF inválido." });
-
-        var existente = await _context.Pacientes.FindAsync(Id); //busca
-        if (existente == null)
+        var existente = await _context.Pacientes.FindAsync(id);
+        if (existente is null)
             return NotFound();
-        
-        if (dto.DataNasc > DateOnly.FromDateTime(DateTime.Today))
-        {
-            return BadRequest(new { mensagem = "Data de nascimento não pode ser futura." });
-        }
 
+        string? erro = null;
+
+        if (dto.Email is not null)
+            erro = ContatoValidator.ValidarEmail(dto.Email);
+
+        if (erro is null && dto.Telefone is not null)
+            erro = ContatoValidator.ValidarTelefone(dto.Telefone);
+
+        if (erro is not null)
+            return BadRequest(new { mensagem = erro });
+
+        if (dto.DataNasc > DateOnly.FromDateTime(DateTime.Today))
+            return BadRequest(new { mensagem = "Data de nascimento não pode ser futura." });
 
         PacienteMapper.ApplyUpdate(dto, existente);
-        
+
         await _context.SaveChangesAsync();
 
         return Ok(PacienteMapper.ToReadDTO(existente));
@@ -115,7 +116,7 @@ public class PacientesController : ControllerBase
 
         if (temConsultaFutura)
         {
-            return Conflict(new { message = "Não é possível excluir o paciente, existem consultas futuras agendadas." });
+            return Conflict(new { mensagem = "Não é possível excluir o paciente, existem consultas futuras agendadas." });
         }
 
         _context.Pacientes.Remove(paciente);

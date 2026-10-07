@@ -2,8 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ApiClinica.Data;
 using ApiClinica.Mappers;
-using System.ComponentModel.DataAnnotations;
-using System.Text.RegularExpressions;
+using ApiClinica.Validators;
 
 namespace ApiClinica.Controllers;
 
@@ -46,8 +45,7 @@ public class MedicosController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateMedico([FromBody] MedicoCreateDTO dto)
     {
-        // Valida e-mail e telefone (para na primeira falha)
-        var erro = ValidarEmail(dto.Email) ?? ValidarTelefone(dto.Telefone);
+        var erro = ContatoValidator.ValidarEmail(dto.Email) ?? ContatoValidator.ValidarTelefone(dto.Telefone);
 
         if (erro != null)
             return BadRequest(new { mensagem = erro });
@@ -72,15 +70,15 @@ public class MedicosController : ControllerBase
         string? erro = null; //Valida campos que foram alterados
 
         if (dto.Email is not null)
-            erro = ValidadorEmailTelefoneController.ValidarEmail(dto.Email);
+            erro = ContatoValidator.ValidarEmail(dto.Email);
 
         if (erro == null && dto.Telefone is not null)
-            erro = ValidadorEmailTelefoneController.ValidarTelefone(dto.Telefone);
+            erro = ContatoValidator.ValidarTelefone(dto.Telefone);
 
         if (erro != null)   
             return BadRequest(new { mensagem = erro });
 
-        MedicoMapper.ApplyUpdate(dto, entidade); // atualiza apenas os campos não nulos
+        MedicoMapper.ApplyUpdate(dto, existente); // atualiza apenas os campos não nulos
 
         await _context.SaveChangesAsync();
 
