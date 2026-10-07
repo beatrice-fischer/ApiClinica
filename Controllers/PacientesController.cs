@@ -47,7 +47,7 @@ public class PacientesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreatePaciente([FromBody] PacienteCreateDTO dto)
     {
-        var erro = HttpValidationProblemDetails(dto.Email) ?? ValidarTelefone(dto.Telefone);
+        var erro = ValidarEmail(dto.Email) ?? ValidarTelefone(dto.Telefone);
 
         if (erro!=null)
         return BadRequest(new {message = erro});
@@ -77,17 +77,10 @@ public class PacientesController : ControllerBase
     [HttpPatch("{Id}")]
     public async Task<IActionResult> PatchPaciente(int Id, [FromBody] PacienteUpdateDTO dto)
     {
-        if (Id != paciente.Id)
-        {
-            return BadRequest("O ID da URL não confere com o ID do corpo da requisição.");
-        }
 
-        var erro = HttpValidationProblemDetails(dto.Email) ?? ValidarTelefone(dto.Telefone);
-
-        if (dto.DataNasc > DateOnly.FromDateTime(DateTime.Today))
-        {
-            return BadRequest(new { mensagem = "Data de nascimento não pode ser futura." });
-        }
+        ValidadorEmailTelefoneController.ValidarEmail(dto.Email);
+        
+        ValidadorEmailTelefoneController.ValidarTelefone(dto.Telefone);
 
         if (!CpfValidator.EhValido(dto.Cpf))
         return BadRequest(new { mensagem = "CPF inválido." });
@@ -100,6 +93,7 @@ public class PacientesController : ControllerBase
         {
             return BadRequest(new { mensagem = "Data de nascimento não pode ser futura." });
         }
+
 
         PacienteMapper.ApplyUpdate(dto, existente);
         
