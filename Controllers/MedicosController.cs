@@ -1,3 +1,10 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using ApiClinica.Data;
+using ApiClinica.Mappers;
+using System.ComponentModel.DataAnnotations;
+using System.Text.RegularExpressions;
+
 namespace ApiClinica.Controllers;
 
 [ApiController]
@@ -43,7 +50,7 @@ public class MedicosController : ControllerBase
         var erro = ValidarEmail(dto.Email) ?? ValidarTelefone(dto.Telefone);
 
         if (erro != null)
-            return BadRequest(new { message = erro });
+            return BadRequest(new { mensagem = erro });
 
         var medico = MedicoMapper.ToEntity(dto); // Converte o DTO em entidade
 
@@ -65,15 +72,15 @@ public class MedicosController : ControllerBase
         string? erro = null; //Valida campos que foram alterados
 
         if (dto.Email is not null)
-            erro = ValidarEmail(dto.Email);
+            erro = ValidadorEmailTelefoneController.ValidarEmail(dto.Email);
 
         if (erro == null && dto.Telefone is not null)
-            erro = ValidarTelefone(dto.Telefone);
+            erro = ValidadorEmailTelefoneController.ValidarTelefone(dto.Telefone);
 
         if (erro != null)   
-            return BadRequest(new { message = erro });
+            return BadRequest(new { mensagem = erro });
 
-        MedicoMapper.ApplyUpdateDTO(existente, dto); // atualiza apenas os campos não nulos
+        MedicoMapper.ApplyUpdate(dto, entidade); // atualiza apenas os campos não nulos
 
         await _context.SaveChangesAsync();
 
@@ -94,37 +101,11 @@ public class MedicosController : ControllerBase
 
         if (temConsultaFutura) // Bloqueia a exclusão com 409 Conflict
         {
-            return Conflict(new { message = "Não é possível excluir o médico, pois ele possui consultas futuras agendadas." });
+            return Conflict(new { mensagem = "Não é possível excluir o médico, pois ele possui consultas futuras agendadas." });
         }
 
         _context.Medicos.Remove(medico); // Remove do banco
         await _context.SaveChangesAsync();
         return NoContent();
     }
-
-    // VALIDAÇÕES - email e telefone
-    private static string? ValidarEmail(string? email)
-    {
-        // Rejeita e-mail vazio, só com espaços ou em formato inválido
-        if (string.IsNullOrWhiteSpace(email) || !new EmailAddressAttribute().IsValid(email))
-        {
-            return "E-mail inválido.";
-        }
- 
-        return null;
-    }
-
-    private static string? ValidarTelefone(string? telefone)
-    {
-        // Rejeita telefone vazio, só com espaços ou em formato inválido
-        if (string.IsNullOrWhiteSpace(telefone) || !TelefoneRegex.IsMatch(telefone.Trim()))
-        {
-            return "Telefone inválido. Use DDD com 2 dígitos e número com 8 ou 9 dígitos, ex.: (47) 98888-8888.";
-        }
-        // Aceita celular (11 dígitos) ou fixo (10 dígitos) com DDD de 2 dígitos,
-        // com ou sem parênteses, espaço e hífen. Ex.: (47)988888888, (47) 98888-8888, 47988888888
- 
-        return null;
-    }
-
 }
