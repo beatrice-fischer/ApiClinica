@@ -1,6 +1,8 @@
-using Microsoft.AspNetCore.Mvc;
-using ApiClinica.Models;
 using ApiClinica.Data;
+using ApiClinica.Mappers;
+using ApiClinica.Models;
+using ApiClinica.Validators;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace ApiClinica.Controllers;
@@ -22,7 +24,12 @@ public class ConsultasController : ControllerBase
     public async Task<IActionResult> GetConsultas()
     {
         var consultas = await _context.Consultas.ToListAsync();
-        return Ok(consultas);
+
+        var consultasDTO = consultas // Converte cada entidade em DTO de leitura
+            .Select(m => ConsultasMapper.ToReadDTO(m))
+            .ToList();
+
+        return Ok(consultasDTO);
     }
 
     // GET: api/consulta/id
@@ -39,7 +46,7 @@ public class ConsultasController : ControllerBase
 
     // POST: api/consulta
     [HttpPost]
-    public async Task<IActionResult> CreateConsulta([FromBody] Consulta consulta)
+    public async Task<IActionResult> CreateConsulta([FromBody] ConsultaCreateDTO consulta)
     {
         var erro = await ValidarConsulta(consulta.PacienteId, consulta.MedicoId, consulta.DataHora);
 
@@ -51,15 +58,10 @@ public class ConsultasController : ControllerBase
         return CreatedAtAction(nameof(GetConsultaById), new { id = consulta.Id }, consulta);
     }
 
-    // PUT: api/consulta
-    [HttpPut]
-    public async Task<IActionResult> UpdateConsulta(int Id, [FromBody] Consulta consulta)
+    // PATCH: api/consulta
+    [HttpPatch]
+    public async Task<IActionResult> UpdateConsulta(int Id, [FromBody] ConsultaUpdateDTO dto)
     {
-        if (Id != consulta.Id)
-        {
-            return BadRequest("O ID da URL não confere com o ID do corpo da requisição.");
-        }
-
         var existente = await _context.Consultas.FindAsync(Id); //busca
         if (existente == null)
             return NotFound();
@@ -69,9 +71,8 @@ public class ConsultasController : ControllerBase
         if (erro != null)
             return erro;
 
-        existente.PacienteId = consulta.PacienteId; //atualiza os campos
-        existente.MedicoId = consulta.MedicoId;
-        existente.DataHora = consulta.DataHora;
+
+        ConsultaMapper.ApplyUpdate(dto, existente); // atualiza apenas os campos não nulos
 
         await _context.SaveChangesAsync();
 
