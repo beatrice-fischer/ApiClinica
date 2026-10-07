@@ -75,7 +75,7 @@ public class MedicosController : ControllerBase
         if (erro == null && dto.Telefone is not null)
             erro = ContatoValidator.ValidarTelefone(dto.Telefone);
 
-        if (erro != null)   
+        if (erro != null)
             return BadRequest(new { mensagem = erro });
 
         MedicoMapper.ApplyUpdate(dto, existente); // atualiza apenas os campos não nulos
@@ -107,3 +107,47 @@ public class MedicosController : ControllerBase
         return NoContent();
     }
 }
+
+/* ============================================================================
+ * TESTES MANUAIS — MedicosController
+ * Base: http://localhost:5052   (confira a porta na linha "Now listening on:")
+ * Todo POST e PATCH precisa do header  Content-Type: application/json
+ * ----------------------------------------------------------------------------
+ *
+ * [1] GET /api/medicos
+ *     200 com array.
+ *
+ * [2] GET /api/medicos/{id}
+ *     200 para id existente, 404 para inexistente.
+ *
+ * [3] POST /api/medicos
+ *     {
+ *       "Nome": "Dr. Carlos Silva",
+ *       "Email": "carlos.silva@example.com",
+ *       "Telefone": "(47) 97777-7777",
+ *       "CRM": "CRM-SC 12345"
+ *     }
+ *     201 + header Location.
+ *
+ *     Variacoes de erro:
+ *       "Email": "arroba-faltando"    -> 400
+ *       "Telefone": "abc"             -> 400
+ *
+ * [4] PATCH /api/medicos/{id}
+ *     { "Telefone": "(47) 96666-6666" }
+ *     204. Faca um GET em seguida: Nome, Email e CRM INTACTOS.
+ *
+ *       { "Telefone": "xyz" }         -> 400
+ *       { "Email": "sem-arroba" }     -> 400
+ *       PATCH em /api/medicos/9999    -> 404
+ *
+ * [5] DELETE /api/medicos/{id}
+ *     409 se o medico tiver consulta futura agendada.
+ *     204 depois que a consulta for excluida.
+ *     404 para id inexistente.
+ *
+ * ----------------------------------------------------------------------------
+ * Formato de telefone aceito pelo ContatoValidator: DDD de 2 digitos e numero
+ * de 8 ou 9 digitos, com ou sem parenteses, espaco e hifen.
+ *   (47) 98888-8888   (47)988888888   47988888888   47 3333-4444
+ * ========================================================================== */
