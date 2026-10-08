@@ -19,7 +19,6 @@ public class PacientesController : ControllerBase
 
     // GET: api/paciente
     [HttpGet]
-    //método que busca os pacientes no banco
     public async Task<IActionResult> GetPacientes()
     {
         var pacientes = await _context.Pacientes.ToListAsync();
@@ -33,7 +32,6 @@ public class PacientesController : ControllerBase
 
     // GET: api/paciente/id
     [HttpGet("{id}")]
-    //método que busca o paciente no banco por ID
     public async Task<IActionResult> GetPacienteById(int id)
     {
         var paciente = await _context.Pacientes.FindAsync(id);

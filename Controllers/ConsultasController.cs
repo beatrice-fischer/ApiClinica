@@ -1,6 +1,5 @@
 using ApiClinica.Data;
 using ApiClinica.Mappers;
-using ApiClinica.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -45,7 +44,6 @@ public class ConsultasController : ControllerBase
     }
 
     // POST: api/consulta
-    [HttpPost]
     [HttpPost]
     public async Task<IActionResult> CreateConsulta([FromBody] ConsultaCreateDTO dto)
     {
@@ -212,9 +210,4 @@ public class ConsultasController : ControllerBase
  * [6] DELETE /api/consultas/{id}
  *     204. Id inexistente -> 404.
  *
- * ----------------------------------------------------------------------------
- * Os blocos [3] a [5] descrevem o comportamento esperado DEPOIS da conversao
- * dos endpoints para DTO e PATCH. Enquanto o POST receber a entidade crua e o
- * PUT estiver no lugar do PATCH, sirvam como criterio de aceite, nao como
- * descricao do que roda hoje.
  * ========================================================================== */

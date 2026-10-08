@@ -86,7 +86,7 @@ public class MedicosController : ControllerBase
     }
 
     // DELETE: api/medico/id
-    [HttpDelete("{id}")]
+    [HttpDelete("{Id}")]
     public async Task<IActionResult> DeleteMedico(int id)
     {
         var medico = await _context.Medicos.FindAsync(id); // Busca o médico
