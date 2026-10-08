@@ -1,7 +1,6 @@
 using ApiClinica.Data;
 using ApiClinica.Mappers;
 using ApiClinica.Models;
-using ApiClinica.Validators;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,8 +25,8 @@ public class ConsultasController : ControllerBase
     {
         var consultas = await _context.Consultas.ToListAsync();
 
-        var consultasDTO = consultas // Converte cada entidade em DTO de leitura
-            .Select(m => ConsultasMapper.ToReadDTO(m))
+        var consultasDTO = consultas            // Converte cada entidade em DTO de leitura
+            .Select(c => ConsultaMapper.ToReadDTO(c))
             .ToList();
 
         return Ok(consultasDTO);
@@ -42,43 +41,53 @@ public class ConsultasController : ControllerBase
         if (consulta == null)
             return NotFound();
 
-        return Ok(consulta);
+        return Ok(ConsultaMapper.ToReadDTO(consulta));
     }
 
     // POST: api/consulta
     [HttpPost]
-    public async Task<IActionResult> CreateConsulta([FromBody] ConsultaCreateDTO consulta)
+    [HttpPost]
+    public async Task<IActionResult> CreateConsulta([FromBody] ConsultaCreateDTO dto)
     {
-        var erro = await ValidarConsulta(consulta.PacienteId, consulta.MedicoId, consulta.DataHora);
+        var erro = await ValidarConsulta(dto.PacienteId, dto.MedicoId, dto.DataHora);
 
         if (erro != null)
             return erro;
 
+        var consulta = ConsultaMapper.ToEntity(dto);   // DTO -> entidade
+
         _context.Consultas.Add(consulta);
-        await _context.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetConsultaById), new { id = consulta.Id }, consulta);
+        await _context.SaveChangesAsync();             // aqui o banco preenche o Id
+
+        return CreatedAtAction(nameof(GetConsultaById), new { id = consulta.Id },
+                               ConsultaMapper.ToReadDTO(consulta));
     }
 
     // PATCH: api/consulta
-    [HttpPatch]
-    public async Task<IActionResult> UpdateConsulta(int Id, [FromBody] ConsultaUpdateDTO dto)
+    [HttpPatch("{id}")]
+    public async Task<IActionResult> UpdateConsulta(int id, [FromBody] ConsultaUpdateDTO dto)
     {
-        var existente = await _context.Consultas.FindAsync(Id); //busca
+        var existente = await _context.Consultas.FindAsync(id);
         if (existente == null)
             return NotFound();
 
-        var erro = await ValidarConsulta(consulta.PacienteId, consulta.MedicoId, consulta.DataHora, Id);
+        // Valores finais: o que veio no corpo, ou o que ja esta gravado
+        var pacienteId = dto.PacienteId ?? existente.PacienteId;
+        var medicoId = dto.MedicoId ?? existente.MedicoId;
+        var dataHora = dto.DataHora ?? existente.DataHora;
+
+        var erro = await ValidarConsulta(pacienteId, medicoId, dataHora, id);
 
         if (erro != null)
             return erro;
 
-
-        ConsultaMapper.ApplyUpdate(dto, existente); // atualiza apenas os campos não nulos
+        ConsultaMapper.ApplyUpdate(dto, existente);    // atualiza apenas os campos nao nulos
 
         await _context.SaveChangesAsync();
 
         return NoContent();
     }
+
 
     // DELETE: api/medico/id
     [HttpDelete("{Id}")]
@@ -92,6 +101,7 @@ public class ConsultasController : ControllerBase
         await _context.SaveChangesAsync();
         return NoContent();
     }
+
 
     //================================================================
     //  VALIDAÇÃO das regras DE NEGÓCIO para agendamento de consultas
