@@ -1,6 +1,9 @@
-public class ConsultaUpdateDTO
+namespace ApiClinica.DTOs
 {
-    public int? PacienteId { get; set; }
-    public int? MedicoId { get; set; }
-    public DateTime? DataHora { get; set; }
+    public class ConsultaUpdateDTO
+    {
+        public int? PacienteId { get; set; }
+        public int? MedicoId { get; set; }
+        public DateTime? DataHora { get; set; }
+    }
 }

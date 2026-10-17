@@ -4,6 +4,8 @@ using ApiClinica.Data;
 using Microsoft.EntityFrameworkCore;
 using ApiClinica.Mappers;
 using ApiClinica.Validators;
+using ApiClinica.DTOs;
+using ApiClinica.Interfaces;
 
 namespace ApiClinica.Controllers;
 
@@ -12,9 +14,11 @@ namespace ApiClinica.Controllers;
 public class PacientesController : ControllerBase
 {
     private readonly AppDbContext _context;
-    public PacientesController(AppDbContext context)
+    private readonly IPacienteMapper _mapper;
+    public PacientesController(AppDbContext context, IPacienteMapper mapper)
     {
         _context = context;
+        _mapper = mapper;
     }
 
     // GET: api/paciente
@@ -24,7 +28,7 @@ public class PacientesController : ControllerBase
         var pacientes = await _context.Pacientes.ToListAsync();
 
         var pacientesDTO = pacientes
-            .Select(p => PacienteMapper.ToReadDTO(p))
+            .Select(p => _mapper.ToReadDTO(p))
             .ToList();
 
         return Ok(pacientesDTO);
@@ -39,7 +43,7 @@ public class PacientesController : ControllerBase
         if (paciente == null)
             return NotFound();
 
-        return Ok(PacienteMapper.ToReadDTO(paciente));
+        return Ok(_mapper.ToReadDTO(paciente));
     }
 
     /* TESTE MANUAL
@@ -67,12 +71,12 @@ public class PacientesController : ControllerBase
         if (await _context.Pacientes.AnyAsync(p => p.Cpf == dto.Cpf))
             return Conflict(new { mensagem = "Já existe um paciente com este CPF." });
 
-        var paciente = PacienteMapper.ToEntity(dto);
+        var paciente = _mapper.ToEntity(dto);
 
         _context.Pacientes.Add(paciente);
         await _context.SaveChangesAsync();
 
-        var pacienteDTO = PacienteMapper.ToReadDTO(paciente);
+        var pacienteDTO = _mapper.ToReadDTO(paciente);
 
         return CreatedAtAction(nameof(GetPacienteById), new { id = paciente.Id }, pacienteDTO);
     }
@@ -99,11 +103,11 @@ public class PacientesController : ControllerBase
         if (dto.DataNasc > DateOnly.FromDateTime(DateTime.Today))
             return BadRequest(new { mensagem = "Data de nascimento não pode ser futura." });
 
-        PacienteMapper.ApplyUpdate(dto, existente);
+        _mapper.ApplyUpdate(dto, existente);
 
         await _context.SaveChangesAsync();
 
-        return Ok(PacienteMapper.ToReadDTO(existente));
+        return Ok(_mapper.ToReadDTO(existente));
     }
 
     // DELETE: api/paciente/id

@@ -1,7 +1,11 @@
-using ApiClinica.Data;
-using ApiClinica.Mappers;
 using Microsoft.AspNetCore.Mvc;
+using ApiClinica.Models;
+using ApiClinica.Data;
 using Microsoft.EntityFrameworkCore;
+using ApiClinica.Mappers;
+using ApiClinica.Validators;
+using ApiClinica.DTOs;
+using ApiClinica.Interfaces;
 
 namespace ApiClinica.Controllers;
 
@@ -14,9 +18,11 @@ public class ConsultasController : ControllerBase
     private const int DuracaoConsultaMinutos = 30;
 
     private readonly AppDbContext _context;
-    public ConsultasController(AppDbContext context)
+    private readonly IConsultaMapper _mapper;
+    public ConsultasController(AppDbContext context, IConsultaMapper mapper)
     {
         _context = context;
+        _mapper = mapper;
     }
     // GET: api/consulta
     [HttpGet]
@@ -25,7 +31,7 @@ public class ConsultasController : ControllerBase
         var consultas = await _context.Consultas.ToListAsync();
 
         var consultasDTO = consultas            // Converte cada entidade em DTO de leitura
-            .Select(c => ConsultaMapper.ToReadDTO(c))
+            .Select(c => _mapper.ToReadDTO(c))
             .ToList();
 
         return Ok(consultasDTO);
@@ -40,7 +46,7 @@ public class ConsultasController : ControllerBase
         if (consulta == null)
             return NotFound();
 
-        return Ok(ConsultaMapper.ToReadDTO(consulta));
+        return Ok(_mapper.ToReadDTO(consulta));
     }
 
     // POST: api/consulta
@@ -52,13 +58,13 @@ public class ConsultasController : ControllerBase
         if (erro != null)
             return erro;
 
-        var consulta = ConsultaMapper.ToEntity(dto);   // DTO -> entidade
+        var consulta = _mapper.ToEntity(dto);   // DTO -> entidade
 
         _context.Consultas.Add(consulta);
         await _context.SaveChangesAsync();             // aqui o banco preenche o Id
 
         return CreatedAtAction(nameof(GetConsultaById), new { id = consulta.Id },
-                               ConsultaMapper.ToReadDTO(consulta));
+                               _mapper.ToReadDTO(consulta));
     }
 
     // PATCH: api/consulta
@@ -79,7 +85,7 @@ public class ConsultasController : ControllerBase
         if (erro != null)
             return erro;
 
-        ConsultaMapper.ApplyUpdate(dto, existente);    // atualiza apenas os campos nao nulos
+        _mapper.ApplyUpdate(dto, existente);    // atualiza apenas os campos nao nulos
 
         await _context.SaveChangesAsync();
 
