@@ -6,11 +6,13 @@ using ApiClinica.Mappers;
 using ApiClinica.Validators;
 using ApiClinica.DTOs;
 using ApiClinica.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ApiClinica.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class PacientesController : ControllerBase
 {
     private readonly AppDbContext _context;
