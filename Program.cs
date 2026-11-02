@@ -2,6 +2,8 @@
 
 using ApiClinica.Data;
 using Microsoft.EntityFrameworkCore;
+using ApiClinica.Interfaces;
+using ApiClinica.Mappers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +24,9 @@ var dbPath = Path.Combine(pasta?.FullName ?? AppContext.BaseDirectory, "clinica.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite($"Data Source={dbPath}"));
+builder.Services.AddScoped<IPacienteMapper,PacienteMapper>();
+builder.Services.AddScoped<IMedicoMapper,MedicoMapper>();
+builder.Services.AddScoped<IConsultaMapper,ConsultaMapper>();
 
 var app = builder.Build();
 

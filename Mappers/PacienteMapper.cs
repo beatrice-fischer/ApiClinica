@@ -1,10 +1,12 @@
 using ApiClinica.Models;
+using ApiClinica.DTOs;
+using ApiClinica.Interfaces;
 
 namespace ApiClinica.Mappers;
 
-public static class PacienteMapper
+public class PacienteMapper : IPacienteMapper
 {
-    public static Paciente ToEntity(PacienteCreateDTO dto)
+    public Paciente ToEntity(PacienteCreateDTO dto)
     {
         return new Paciente
         {
@@ -16,7 +18,7 @@ public static class PacienteMapper
         };
     }
 
-    public static PacienteReadDTO ToReadDTO(Paciente paciente)
+    public PacienteReadDTO ToReadDTO(Paciente paciente)
     {
         return new PacienteReadDTO
         {
@@ -28,7 +30,7 @@ public static class PacienteMapper
             //Paciente não possui CPF no DTO de leitura, então não incluímos aqui
         };
     }
-    public static void ApplyUpdate (PacienteUpdateDTO dto, Paciente entidade)
+    public void ApplyUpdate (PacienteUpdateDTO dto, Paciente entidade)
     {
         if (dto.Nome is not null) entidade.Nome = dto.Nome;
         if (dto.Email is not null) entidade.Email = dto.Email;

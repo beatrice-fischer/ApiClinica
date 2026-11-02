@@ -1,10 +1,12 @@
 using ApiClinica.Models;
+using ApiClinica.DTOs;
+using ApiClinica.Interfaces;
 
 namespace ApiClinica.Mappers;
 
-public static class MedicoMapper
+public class MedicoMapper : IMedicoMapper
 {
-    public static Medico ToEntity(MedicoCreateDTO dto)
+    public Medico ToEntity(MedicoCreateDTO dto)
     {
         return new Medico
         {
@@ -15,7 +17,7 @@ public static class MedicoMapper
         };
     }
 
-    public static MedicoReadDTO ToReadDTO(Medico medico)
+    public MedicoReadDTO ToReadDTO(Medico medico)
     {
         return new MedicoReadDTO
         {
@@ -26,7 +28,7 @@ public static class MedicoMapper
             CRM = medico.CRM
         };
     }
-    public static void ApplyUpdate (MedicoUpdateDTO dto, Medico entidade)
+    public void ApplyUpdate (MedicoUpdateDTO dto, Medico entidade)
     {
         if (dto.Nome is not null) entidade.Nome = dto.Nome;
         if (dto.Email is not null) entidade.Email = dto.Email;

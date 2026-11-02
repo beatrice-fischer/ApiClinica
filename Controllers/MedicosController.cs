@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using ApiClinica.Models;
 using ApiClinica.Data;
+using Microsoft.EntityFrameworkCore;
 using ApiClinica.Mappers;
 using ApiClinica.Validators;
+using ApiClinica.DTOs;
+using ApiClinica.Interfaces;
 
 namespace ApiClinica.Controllers;
 
@@ -11,9 +14,11 @@ namespace ApiClinica.Controllers;
 public class MedicosController : ControllerBase
 {
     private readonly AppDbContext _context;
-    public MedicosController(AppDbContext context)
+    private readonly IMedicoMapper _mapper;
+    public MedicosController(AppDbContext context, IMedicoMapper mapper)
     {
         _context = context;
+        _mapper = mapper;
     }
 
     // GET: api/medico
@@ -23,7 +28,7 @@ public class MedicosController : ControllerBase
         var medicos = await _context.Medicos.ToListAsync(); // Busca todos os médicos no banco
 
         var medicosDTO = medicos // Converte cada entidade em DTO de leitura
-            .Select(m => MedicoMapper.ToReadDTO(m))
+            .Select(m => _mapper.ToReadDTO(m))
             .ToList();
 
         return Ok(medicosDTO);
@@ -38,7 +43,7 @@ public class MedicosController : ControllerBase
         if (medico == null) // 404 se não existir
             return NotFound();
 
-        return Ok(MedicoMapper.ToReadDTO(medico)); // Devolve o DTO de leitura
+        return Ok(_mapper.ToReadDTO(medico)); // Devolve o DTO de leitura
     }
 
     // POST: api/medico
@@ -50,13 +55,13 @@ public class MedicosController : ControllerBase
         if (erro != null)
             return BadRequest(new { mensagem = erro });
 
-        var medico = MedicoMapper.ToEntity(dto); // Converte o DTO em entidade
+        var medico = _mapper.ToEntity(dto); // Converte o DTO em entidade
 
         _context.Medicos.Add(medico); // Salva no banco
         await _context.SaveChangesAsync();
 
         // 201 com o DTO de leitura e o link do GET por Id
-        return CreatedAtAction(nameof(GetMedicoById), new { id = medico.Id }, MedicoMapper.ToReadDTO(medico));
+        return CreatedAtAction(nameof(GetMedicoById), new { id = medico.Id }, _mapper.ToReadDTO(medico));
     }
 
     // PATCH: api/medicos/id
@@ -78,7 +83,7 @@ public class MedicosController : ControllerBase
         if (erro != null)
             return BadRequest(new { mensagem = erro });
 
-        MedicoMapper.ApplyUpdate(dto, existente); // atualiza apenas os campos não nulos
+        _mapper.ApplyUpdate(dto, existente); // atualiza apenas os campos não nulos
 
         await _context.SaveChangesAsync();
 
