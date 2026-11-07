@@ -1,12 +1,8 @@
-using Microsoft.AspNetCore.Mvc;
-using ApiClinica.Models;
-using ApiClinica.Data;
-using Microsoft.EntityFrameworkCore;
-using ApiClinica.Mappers;
-using ApiClinica.Validators;
-using ApiClinica.DTOs;
+using Microsoft.AspNetCore.Mvc; 
+using ApiClinica.DTOs; 
 using ApiClinica.Interfaces;
-using Microsoft.AspNetCore.Authorization;
+using ApiClinica.Services;
+using Microsoft.AspNetCore.Authorization; 
 
 namespace ApiClinica.Controllers;
 
@@ -15,37 +11,26 @@ namespace ApiClinica.Controllers;
 [Authorize]
 public class PacientesController : ControllerBase
 {
-    private readonly AppDbContext _context;
-    private readonly IPacienteMapper _mapper;
-    public PacientesController(AppDbContext context, IPacienteMapper mapper)
+    private readonly IPaciente _service;
+    public PacientesController(IPacienteService service)
     {
-        _context = context;
-        _mapper = mapper;
+        _service = service;
     }
 
     // GET: api/paciente
     [HttpGet]
     public async Task<IActionResult> GetPacientes()
     {
-        var pacientes = await _context.Pacientes.ToListAsync();
-
-        var pacientesDTO = pacientes
-            .Select(p => _mapper.ToReadDTO(p))
-            .ToList();
-
-        return Ok(pacientesDTO);
+        var r = await _service.ListarAsync();
+        return r.Sucesso ? Ok(r.Valor) : Traduzir (r.Tipo, r.Erro);
     }
 
     // GET: api/paciente/id
     [HttpGet("{id}")]
     public async Task<IActionResult> GetPacienteById(int id)
     {
-        var paciente = await _context.Pacientes.FindAsync(id);
-
-        if (paciente == null)
-            return NotFound();
-
-        return Ok(_mapper.ToReadDTO(paciente));
+        var r = await _service.BuscarPorIdAsync(id);
+        return r.Sucesso ? Ok (r.Valor) : Traduzir(r.Tipo, r.Erro);
     }
 
     /* TESTE MANUAL
@@ -57,81 +42,40 @@ public class PacientesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreatePaciente([FromBody] PacienteCreateDTO dto)
     {
-        var erro = ContatoValidator.ValidarEmail(dto.Email) ?? ContatoValidator.ValidarTelefone(dto.Telefone);
+        var r = await _service.CriarAsync(dto);
 
-        if (erro != null)
-            return BadRequest(new { mensagem = erro });
+        if (!r.Sucesso)
+            return Traduzir(r.Tipo, r.Erro);
 
-        if (dto.DataNasc > DateOnly.FromDateTime(DateTime.Today))
-        {
-            return BadRequest(new { mensagem = "Data de nascimento não pode ser futura." });
-        }
-
-        if (!CpfValidator.EhValido(dto.Cpf))
-            return BadRequest(new { mensagem = "CPF inválido." });
-
-        if (await _context.Pacientes.AnyAsync(p => p.Cpf == dto.Cpf))
-            return Conflict(new { mensagem = "Já existe um paciente com este CPF." });
-
-        var paciente = _mapper.ToEntity(dto);
-
-        _context.Pacientes.Add(paciente);
-        await _context.SaveChangesAsync();
-
-        var pacienteDTO = _mapper.ToReadDTO(paciente);
-
-        return CreatedAtAction(nameof(GetPacienteById), new { id = paciente.Id }, pacienteDTO);
+        return CreatedAtAction(nameof(GetPacienteById), new { id =r.valor }, r.Valor);
     }
 
     // PATCH: api/pacientes/id
     [HttpPatch("{id}")]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> PatchPaciente(int id, [FromBody] PacienteUpdateDTO dto)
     {
-        var existente = await _context.Pacientes.FindAsync(id);
-        if (existente is null)
-            return NotFound();
-
-        string? erro = null;
-
-        if (dto.Email is not null)
-            erro = ContatoValidator.ValidarEmail(dto.Email);
-
-        if (erro is null && dto.Telefone is not null)
-            erro = ContatoValidator.ValidarTelefone(dto.Telefone);
-
-        if (erro is not null)
-            return BadRequest(new { mensagem = erro });
-
-        if (dto.DataNasc > DateOnly.FromDateTime(DateTime.Today))
-            return BadRequest(new { mensagem = "Data de nascimento não pode ser futura." });
-
-        _mapper.ApplyUpdate(dto, existente);
-
-        await _context.SaveChangesAsync();
-
-        return Ok(_mapper.ToReadDTO(existente));
+        var r = await _service.AtualizarAsync(id, dto);
+        return r.Sucesso ? Ok(r.Valor) : Traduzir(r.Tipo, r.Erro);
     }
 
     // DELETE: api/paciente/id
     [HttpDelete("{Id}")]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> DeletePaciente(int Id)
     {
-        var paciente = await _context.Pacientes.FindAsync(Id);
-        if (paciente == null)
-            return NotFound();
-
-        bool temConsultaFutura = await _context.Consultas.AnyAsync(c =>
-        c.PacienteId == Id && c.DataHora > DateTime.Now);
-
-        if (temConsultaFutura)
-        {
-            return Conflict(new { mensagem = "Não é possível excluir o paciente, existem consultas futuras agendadas." });
-        }
-
-        _context.Pacientes.Remove(paciente);
-        await _context.SaveChangesAsync();
-        return NoContent();
+        var r = await _service.ExcluirAsync(id);
+        return r.Sucesso ? NoCotent() : Traduzir(r.Tipo, r.Erro);
     }
+
+    // Único lugar do projeto que decide código de status
+    private IActionResult Traduzir (TipoErro tipo, string? erro) => tipo switch
+    {
+        TipoErro.NaoEncontrado => NotFound(),
+        TipoErro.Invalido => BadRequest(new{mensagem = erro}),
+        TipoErro.Conflito => Conflict(new{mensagem = erro}),
+         _   => StatusCode(500)
+    };
 }
 
 /* ============================================================================
