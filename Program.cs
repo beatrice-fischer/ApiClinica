@@ -10,14 +10,23 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var pasta = new DirectoryInfo(AppContext.BaseDirectory);
+while (pasta is not null && !pasta.EnumerateFiles("*.csproj").Any())
+    pasta = pasta.Parent;
+
+var dbPath = Path.Combine(pasta?.FullName ?? AppContext.BaseDirectory, "clinica.db");
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-
-// Adiciona o banco (SQLite)
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite("Data Source=clinica.db"));
+builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite($"Data Source={dbPath}"));
 
 builder.Services.AddScoped<IPacienteMapper, PacienteMapper>();
+builder.Services.AddScoped<IMedicoMapper, MedicoMapper>();
+builder.Services.AddScoped<IConsultaMapper, ConsultaMapper>();
+
+builder.Services.AddScoped<IPacienteService, PacienteService>();
+builder.Services.AddScoped<IMedicoService, MedicoService>();
+builder.Services.AddScoped<IConsultaService, ConsultaService>();
 
 // Busca a chave JWT definida no appsettings.json
 // Essa chave será usada para assinar e validar os tokens
@@ -70,29 +79,11 @@ app.UseHttpsRedirection();
 app.UseAuthentication(); // IMPORTANTE
 app.UseAuthorization();
 
-// var pasta = new DirectoryInfo(AppContext.BaseDirectory);
-// while (pasta is not null && !pasta.EnumerateFiles("*.csproj").Any())
-//     pasta = pasta.Parent;
-
-// var dbPath = Path.Combine(pasta?.FullName ?? AppContext.BaseDirectory, "clinica.db");
-
-// builder.Services.AddControllers();
-// builder.Services.AddEndpointsApiExplorer();
-// builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite($"Data Source={dbPath}"));
-// builder.Services.AddScoped<IPacienteMapper,PacienteMapper>();
-// builder.Services.AddScoped<IMedicoMapper,MedicoMapper>();
-// builder.Services.AddScoped<IConsultaMapper,ConsultaMapper>();
-
-//var app = builder.Build();
-
-// Cria o banco e aplica as migrations pendentes na inicialização, para que um
-// clone novo suba funcionando sem ninguém precisar rodar "dotnet ef database
-// update" manualmente.
-// using (var scope = app.Services.CreateScope())
-// {
-//     var contexto = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-//     contexto.Database.Migrate();
-// }
+using (var scope = app.Services.CreateScope())
+{
+    var contexto = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    contexto.Database.Migrate();
+}
 
 // app.Logger.LogInformation("Banco de dados em uso: {Caminho}", dbPath);
 
