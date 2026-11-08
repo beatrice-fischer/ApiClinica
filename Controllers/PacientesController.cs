@@ -1,8 +1,8 @@
-using Microsoft.AspNetCore.Mvc; 
-using ApiClinica.DTOs; 
+using ApiClinica.DTOs;
 using ApiClinica.Interfaces;
 using ApiClinica.Services;
-using Microsoft.AspNetCore.Authorization; 
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ApiClinica.Controllers;
 
@@ -11,7 +11,8 @@ namespace ApiClinica.Controllers;
 [Authorize]
 public class PacientesController : ControllerBase
 {
-    private readonly IPaciente _service;
+    private readonly IPacienteService _service;
+
     public PacientesController(IPacienteService service)
     {
         _service = service;
@@ -22,7 +23,7 @@ public class PacientesController : ControllerBase
     public async Task<IActionResult> GetPacientes()
     {
         var r = await _service.ListarAsync();
-        return r.Sucesso ? Ok(r.Valor) : Traduzir (r.Tipo, r.Erro);
+        return r.Sucesso ? Ok(r.Valor) : Traduzir(r.Tipo, r.Erro);
     }
 
     // GET: api/paciente/id
@@ -30,7 +31,7 @@ public class PacientesController : ControllerBase
     public async Task<IActionResult> GetPacienteById(int id)
     {
         var r = await _service.BuscarPorIdAsync(id);
-        return r.Sucesso ? Ok (r.Valor) : Traduzir(r.Tipo, r.Erro);
+        return r.Sucesso ? Ok(r.Valor) : Traduzir(r.Tipo, r.Erro);
     }
 
     /* TESTE MANUAL
@@ -47,7 +48,7 @@ public class PacientesController : ControllerBase
         if (!r.Sucesso)
             return Traduzir(r.Tipo, r.Erro);
 
-        return CreatedAtAction(nameof(GetPacienteById), new { id =r.valor }, r.Valor);
+        return CreatedAtAction(nameof(GetPacienteById), new { id = r.Valor!.Id }, r.Valor);
     }
 
     // PATCH: api/pacientes/id
@@ -60,22 +61,23 @@ public class PacientesController : ControllerBase
     }
 
     // DELETE: api/paciente/id
-    [HttpDelete("{Id}")]
+    [HttpDelete("{id}")]
     [Authorize(Roles = "admin")]
-    public async Task<IActionResult> DeletePaciente(int Id)
+    public async Task<IActionResult> DeletePaciente(int id)
     {
         var r = await _service.ExcluirAsync(id);
-        return r.Sucesso ? NoCotent() : Traduzir(r.Tipo, r.Erro);
+        return r.Sucesso ? NoContent() : Traduzir(r.Tipo, r.Erro);
     }
 
     // Único lugar do projeto que decide código de status
-    private IActionResult Traduzir (TipoErro tipo, string? erro) => tipo switch
-    {
-        TipoErro.NaoEncontrado => NotFound(),
-        TipoErro.Invalido => BadRequest(new{mensagem = erro}),
-        TipoErro.Conflito => Conflict(new{mensagem = erro}),
-         _   => StatusCode(500)
-    };
+    private IActionResult Traduzir(TipoErro tipo, string? erro) =>
+        tipo switch
+        {
+            TipoErro.NaoEncontrado => NotFound(),
+            TipoErro.Invalido => BadRequest(new { mensagem = erro }),
+            TipoErro.Conflito => Conflict(new { mensagem = erro }),
+            _ => StatusCode(500),
+        };
 }
 
 /* ============================================================================

@@ -1,12 +1,13 @@
 //EQUIPE: Beatrice Fischer, Gabriele Maria Freiberger, Lucas de Carvalho Ziele, Raul Schmitz, Gustavo Hreczuck
 
+using System.Text;
 using ApiClinica.Data;
-using Microsoft.EntityFrameworkCore;
 using ApiClinica.Interfaces;
 using ApiClinica.Mappers;
+using ApiClinica.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,19 +26,19 @@ builder.Services.AddScoped<IMedicoMapper, MedicoMapper>();
 builder.Services.AddScoped<IConsultaMapper, ConsultaMapper>();
 
 builder.Services.AddScoped<IPacienteService, PacienteService>();
-builder.Services.AddScoped<IMedicoService, MedicoService>();
-builder.Services.AddScoped<IConsultaService, ConsultaService>();
+
+//builder.Services.AddScoped<IMedicoService, MedicoService>();
+//builder.Services.AddScoped<IConsultaService, ConsultaService>();
 
 // Busca a chave JWT definida no appsettings.json
 // Essa chave será usada para assinar e validar os tokens
 var jwtKey = builder.Configuration["Jwt:Key"];
 
-builder.Services
-
+builder
+    .Services
     // Define que o sistema de autenticação da aplicação será JWT Bearer
     // "Bearer" significa que o token será enviado no header:
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-
     // Configura os parâmetros de validação do JWT
     .AddJwtBearer(options =>
     {
@@ -65,9 +66,7 @@ builder.Services
 
             // Define a chave secreta usada para validar a assinatura
             // A mesma chave usada ao criar o token
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(jwtKey!)
-            )
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!)),
         };
     });
 

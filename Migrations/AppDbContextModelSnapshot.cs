@@ -104,6 +104,10 @@ namespace ApiClinica.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Perfil")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Senha")
                         .IsRequired()
                         .HasColumnType("TEXT");
