@@ -18,7 +18,7 @@ public class ConsultaService : IConsultaService
         _mapper = mapper;
     }
 
-    public async Task<Resultado<List<ConsultaReadDTO>>> ListaAsync()
+    public async Task<Resultado<List<ConsultaReadDTO>>> ListarAsync()
     {
         var consultas = await _context.Consultas.ToListAsync();
 
@@ -29,7 +29,7 @@ public class ConsultaService : IConsultaService
         return Resultado<List<ConsultaReadDTO>>.Ok(dtos);
     }
     
-    public async Task<Resultado<ConsultaReadDTO>> BuscaPorIdAsync(int id)
+    public async Task<Resultado<ConsultaReadDTO>> BuscarPorIdAsync(int id)
     {
         var consulta = await _context.Consultas.FindAsync(id);
 
@@ -108,6 +108,7 @@ public class ConsultaService : IConsultaService
         var medico = await _context.Medicos.FindAsync(medicoId);
         if (medico is null)
             return Resultado.Invalido($"Médico {medicoId} não encontrado.");
+            
         if (dataHora < DateTime.Now)
             return Resultado.Invalido("Não é possível agendar uma consulta em uma data/horário no passado.");
 
@@ -117,8 +118,8 @@ public class ConsultaService : IConsultaService
         bool conflitoMedico = await _context.Consultas.AnyAsync(c =>
             (idIgnorar == null || c.Id != idIgnorar) &&
             c.MedicoId == medicoId &&
-            c.DataHora >= inicioJanela &&
-            c.DataHora <= fimJanela);
+            c.DataHora > inicioJanela &&
+            c.DataHora < fimJanela);
         
         if (conflitoMedico)
             return Resultado.Conflito($"Este médico possui consulta em horário conflitante (intervalo mínimo de {DuracaoConsultaMinutos} minutos).");
@@ -126,22 +127,12 @@ public class ConsultaService : IConsultaService
         bool conflitoPaciente = await _context.Consultas.AnyAsync(c =>
             (idIgnorar == null || c.Id != idIgnorar) &&
             c.PacienteId == pacienteId &&
-            c.DataHora >= inicioJanela &&
-            c.DataHora <= fimJanela);
+            c.DataHora > inicioJanela &&
+            c.DataHora < fimJanela);
         
         if (conflitoPaciente)
             return Resultado.Conflito($"Este paciente possui consulta em horário conflitante (intervalo mínimo de {DuracaoConsultaMinutos} minutos).");
 
         return null;
-    }
-
-    public Task<Resultado<List<ConsultaReadDTO>>> ListarAsync()
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<Resultado<ConsultaReadDTO>> BuscarPorIdAsync(int id)
-    {
-        throw new NotImplementedException();
     }
 }

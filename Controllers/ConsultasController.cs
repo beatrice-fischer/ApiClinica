@@ -1,9 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using ApiClinica.Models;
-using ApiClinica.Data;
-using Microsoft.EntityFrameworkCore;
-using ApiClinica.Mappers;
-using ApiClinica.Validators;
 using ApiClinica.DTOs;
 using ApiClinica.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -62,7 +57,7 @@ public class ConsultasController : ControllerBase
 
 
     // DELETE: api/medico/id
-    [HttpDelete("{Id}")]
+    [HttpDelete("{id}")]
     [Authorize(Roles = "admin")]
     public async Task<IActionResult> DeleteConsulta(int id)
     {
