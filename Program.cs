@@ -27,7 +27,7 @@ builder.Services.AddScoped<IConsultaMapper, ConsultaMapper>();
 
 builder.Services.AddScoped<IPacienteService, PacienteService>();
 
-//builder.Services.AddScoped<IMedicoService, MedicoService>();
+builder.Services.AddScoped<IMedicoService, MedicoService>();
 //builder.Services.AddScoped<IConsultaService, ConsultaService>();
 
 // Busca a chave JWT definida no appsettings.json

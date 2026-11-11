@@ -12,7 +12,7 @@ namespace ApiClinica.Controllers;
 public class MedicosController : ControllerBase
 {
     private readonly IMedicoService _service;
-    public MedicosController(IMedicoService _service)
+    public MedicosController(IMedicoService service)
     {
         _service = service;
     }
@@ -33,7 +33,7 @@ public class MedicosController : ControllerBase
         return r.Sucesso ? Ok(r.Valor) : Traduzir(r.Tipo, r.Erro);
     }
 
-    // POST: api/medico
+    // POST: api/medicos
     [HttpPost]
     public async Task<IActionResult> CreateMedico([FromBody] MedicoCreateDTO dto)
     {
@@ -54,20 +54,20 @@ public class MedicosController : ControllerBase
         return r.Sucesso ? NoContent() : Traduzir(r.Tipo, r.Erro);
     }
 
-    // DELETE: api/medico/id
-    [HttpDelete("{Id}")]
+    // DELETE: api/medicos/id
+    [HttpDelete("{id}")]
     [Authorize(Roles = "admin")]
     public async Task<IActionResult> DeleteMedico(int id)
     {
-       var r = await _service.ExcluirAsync(id);
-       return r.Sucesso ? NoContent() : Traduzir(r.Tipo, r.Erro);
+        var r = await _service.ExcluirAsync(id);
+        return r.Sucesso ? NoContent() : Traduzir(r.Tipo, r.Erro);
     }
 
     private IActionResult Traduzir(TipoErro tipo, string? erro) => tipo switch
     {
         TipoErro.NaoEncontrado => NotFound(),
-        TipoErro.Invalido => BadRequest(new {mensagem = erro}),
-        TipoErro.Conflito => Conflict(new {mensagem = erro}),
+        TipoErro.Invalido => BadRequest(new { mensagem = erro }),
+        TipoErro.Conflito => Conflict(new { mensagem = erro }),
         _ => StatusCode(500)
     };
 }
