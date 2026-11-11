@@ -65,6 +65,36 @@ public class MedicoService : IMedicoService
 
         if (dto.Email is not null)
             erro = ContatoValidator.ValidarEmail(dto.Email);
-// pag 4
+
+        if (erro is null && dto.Telefone is not null)
+            erro = ContatoValidator.ValidarTelefone(dto.Telefone);
+
+        if (erro is not null)
+            return Resultado.Invalido(erro);
+
+        _mapper.ApplyUpdate(dto, existente);
+
+        await _context.SaveChangesAsync();
+
+        return Resultado.Ok();
+    }
+
+    public async Task<Resultado> ExcluirAsync(int id)
+    {
+        var medico = await _context.Medicos.FindAsync(id);
+
+        if (medico is null)
+            return Resultado.NaoEncontrado();
+
+        bool temConsultaFutura = await _context.Consultas.AnyAsync(c =>
+            c.MedicoId == id && c.DataHora > DateTime.Now);
+
+        if (temConsultaFutura)
+            return Resultado.Conflito("Não é possível excluir o médico, pois ele possui consultas futuras agendadas.");
+
+        _context.Medicos.Remove(medico);
+        await _context.SaveChangesAsync();
+
+        return Resultado.Ok();
     }
 }

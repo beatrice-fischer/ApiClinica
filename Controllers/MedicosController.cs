@@ -1,11 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using ApiClinica.Models;
-using ApiClinica.Data;
-using Microsoft.EntityFrameworkCore;
-using ApiClinica.Mappers;
-using ApiClinica.Validators;
 using ApiClinica.DTOs;
 using ApiClinica.Interfaces;
+using ApiClinica.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace ApiClinica.Controllers;
@@ -15,104 +11,65 @@ namespace ApiClinica.Controllers;
 [Authorize]
 public class MedicosController : ControllerBase
 {
-    private readonly AppDbContext _context;
-    private readonly IMedicoMapper _mapper;
-    public MedicosController(AppDbContext context, IMedicoMapper mapper)
+    private readonly IMedicoService _service;
+    public MedicosController(IMedicoService _service)
     {
-        _context = context;
-        _mapper = mapper;
+        _service = service;
     }
 
-    // GET: api/medico
+    // GET: api/medicos
     [HttpGet]
     public async Task<IActionResult> GetMedicos()
     {
-        var medicos = await _context.Medicos.ToListAsync(); // Busca todos os médicos no banco
-
-        var medicosDTO = medicos // Converte cada entidade em DTO de leitura
-            .Select(m => _mapper.ToReadDTO(m))
-            .ToList();
-
-        return Ok(medicosDTO);
+        var r = await _service.ListarAsync();
+        return r.Sucesso ? Ok(r.Valor) : Traduzir(r.Tipo, r.Erro);
     }
 
-    // GET: api/medico/id
+    // GET: api/medicos/id
     [HttpGet("{id}")]
     public async Task<IActionResult> GetMedicoById(int id)
     {
-        var medico = await _context.Medicos.FindAsync(id); // Busca o médico pelo Id
-
-        if (medico == null) // 404 se não existir
-            return NotFound();
-
-        return Ok(_mapper.ToReadDTO(medico)); // Devolve o DTO de leitura
+        var r = await _service.BuscarPorIdAsync(id);
+        return r.Sucesso ? Ok(r.Valor) : Traduzir(r.Tipo, r.Erro);
     }
 
     // POST: api/medico
     [HttpPost]
     public async Task<IActionResult> CreateMedico([FromBody] MedicoCreateDTO dto)
     {
-        var erro = ContatoValidator.ValidarEmail(dto.Email) ?? ContatoValidator.ValidarTelefone(dto.Telefone);
+        var r = await _service.CriarAsync(dto);
 
-        if (erro != null)
-            return BadRequest(new { mensagem = erro });
+        if (!r.Sucesso)
+            return Traduzir(r.Tipo, r.Erro);
 
-        var medico = _mapper.ToEntity(dto); // Converte o DTO em entidade
-
-        _context.Medicos.Add(medico); // Salva no banco
-        await _context.SaveChangesAsync();
-
-        // 201 com o DTO de leitura e o link do GET por Id
-        return CreatedAtAction(nameof(GetMedicoById), new { id = medico.Id }, _mapper.ToReadDTO(medico));
+        return CreatedAtAction(nameof(GetMedicoById), new { id = r.Valor!.Id }, r.Valor);
     }
 
     // PATCH: api/medicos/id
     [HttpPatch("{id}")]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> UpdateMedico(int id, [FromBody] MedicoUpdateDTO dto)
     {
-        var existente = await _context.Medicos.FindAsync(id); //Busca o médico
-        if (existente == null)
-            return NotFound();
-
-        string? erro = null; //Valida campos que foram alterados
-
-        if (dto.Email is not null)
-            erro = ContatoValidator.ValidarEmail(dto.Email);
-
-        if (erro == null && dto.Telefone is not null)
-            erro = ContatoValidator.ValidarTelefone(dto.Telefone);
-
-        if (erro != null)
-            return BadRequest(new { mensagem = erro });
-
-        _mapper.ApplyUpdate(dto, existente); // atualiza apenas os campos não nulos
-
-        await _context.SaveChangesAsync();
-
-        return NoContent();
+        var r = await _service.AtualizarAsync(id, dto);
+        return r.Sucesso ? NoContent() : Traduzir(r.Tipo, r.Erro);
     }
 
     // DELETE: api/medico/id
     [HttpDelete("{Id}")]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> DeleteMedico(int id)
     {
-        var medico = await _context.Medicos.FindAsync(id); // Busca o médico
-        if (medico == null)
-            return NotFound();
-
-        // Verifica se há consultas futuras desse médico
-        bool temConsultaFutura = await _context.Consultas.AnyAsync(c =>
-            c.MedicoId == id && c.DataHora > DateTime.Now);
-
-        if (temConsultaFutura) // Bloqueia a exclusão com 409 Conflict
-        {
-            return Conflict(new { mensagem = "Não é possível excluir o médico, pois ele possui consultas futuras agendadas." });
-        }
-
-        _context.Medicos.Remove(medico); // Remove do banco
-        await _context.SaveChangesAsync();
-        return NoContent();
+       var r = await _service.ExcluirAsync(id);
+       return r.Sucesso ? NoContent() : Traduzir(r.Tipo, r.Erro);
     }
+
+    private IActionResult Traduzir(TipoErro tipo, string? erro) => tipo switch
+    {
+        TipoErro.NaoEncontrado => NotFound(),
+        TipoErro.Invalido => BadRequest(new {mensagem = erro}),
+        TipoErro.Conflito => Conflict(new {mensagem = erro}),
+        _ => StatusCode(500)
+    };
 }
 
 /* ============================================================================
