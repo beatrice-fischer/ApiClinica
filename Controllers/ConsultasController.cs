@@ -1,12 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
-using ApiClinica.Models;
-using ApiClinica.Data;
-using Microsoft.EntityFrameworkCore;
-using ApiClinica.Mappers;
-using ApiClinica.Validators;
 using ApiClinica.DTOs;
 using ApiClinica.Interfaces;
 using Microsoft.AspNetCore.Authorization;
+using ApiClinica.Services;
 
 namespace ApiClinica.Controllers;
 
@@ -17,149 +13,65 @@ namespace ApiClinica.Controllers;
 public class ConsultasController : ControllerBase
 {
 
-    private const int DuracaoConsultaMinutos = 30;
-
-    private readonly AppDbContext _context;
-    private readonly IConsultaMapper _mapper;
-    public ConsultasController(AppDbContext context, IConsultaMapper mapper)
+    private readonly IConsultaService _service;
+    public ConsultasController(IConsultaService service)
     {
-        _context = context;
-        _mapper = mapper;
+        _service = service;
     }
     // GET: api/consulta
     [HttpGet]
     public async Task<IActionResult> GetConsultas()
     {
-        var consultas = await _context.Consultas.ToListAsync();
-
-        var consultasDTO = consultas            // Converte cada entidade em DTO de leitura
-            .Select(c => _mapper.ToReadDTO(c))
-            .ToList();
-
-        return Ok(consultasDTO);
+        var r = await _service.ListarAsync();
+        return r.Sucesso ? Ok(r.Valor) : Traduzir(r.Tipo, r.Erro);
     }
 
     // GET: api/consulta/id
     [HttpGet("{id}")]
     public async Task<IActionResult> GetConsultaById(int id)
     {
-        var consulta = await _context.Consultas.FindAsync(id);
-
-        if (consulta == null)
-            return NotFound();
-
-        return Ok(_mapper.ToReadDTO(consulta));
+        var r = await _service.BuscarPorIdAsync(id);
+        return r.Sucesso ? Ok(r.Valor) : Traduzir(r.Tipo, r.Erro);
     }
 
     // POST: api/consulta
     [HttpPost]
     public async Task<IActionResult> CreateConsulta([FromBody] ConsultaCreateDTO dto)
     {
-        var erro = await ValidarConsulta(dto.PacienteId, dto.MedicoId, dto.DataHora);
+        var r = await _service.CriarAsync(dto);
 
-        if (erro != null)
-            return erro;
+        if (!r.Sucesso)
+            return Traduzir(r.Tipo, r.Erro);
 
-        var consulta = _mapper.ToEntity(dto);   // DTO -> entidade
-
-        _context.Consultas.Add(consulta);
-        await _context.SaveChangesAsync();             // aqui o banco preenche o Id
-
-        return CreatedAtAction(nameof(GetConsultaById), new { id = consulta.Id },
-                               _mapper.ToReadDTO(consulta));
+        return CreatedAtAction(nameof(GetConsultaById), new { id = r.Valor!.Id }, r.Valor);
     }
 
     // PATCH: api/consulta
     [HttpPatch("{id}")]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> UpdateConsulta(int id, [FromBody] ConsultaUpdateDTO dto)
     {
-        var existente = await _context.Consultas.FindAsync(id);
-        if (existente == null)
-            return NotFound();
-
-        // Valores finais: o que veio no corpo, ou o que ja esta gravado
-        var pacienteId = dto.PacienteId ?? existente.PacienteId;
-        var medicoId = dto.MedicoId ?? existente.MedicoId;
-        var dataHora = dto.DataHora ?? existente.DataHora;
-
-        var erro = await ValidarConsulta(pacienteId, medicoId, dataHora, id);
-
-        if (erro != null)
-            return erro;
-
-        _mapper.ApplyUpdate(dto, existente);    // atualiza apenas os campos nao nulos
-
-        await _context.SaveChangesAsync();
-
-        return NoContent();
+        var r = await _service.AtualizarAsync(id, dto);
+        return r.Sucesso ? NoContent() : Traduzir(r.Tipo, r.Erro);
     }
 
 
     // DELETE: api/medico/id
-    [HttpDelete("{Id}")]
-    public async Task<IActionResult> DeleteConsulta(int Id)
+    [HttpDelete("{id}")]
+    [Authorize(Roles = "admin")]
+    public async Task<IActionResult> DeleteConsulta(int id)
     {
-        var consulta = await _context.Consultas.FindAsync(Id); //busca
-        if (consulta == null)
-            return NotFound();
-
-        _context.Consultas.Remove(consulta);
-        await _context.SaveChangesAsync();
-        return NoContent();
+        var r = await _service.ExcluirAsync(id);
+        return r.Sucesso ? NoContent() : Traduzir(r.Tipo, r.Erro);
     }
 
-
-    //================================================================
-    //  VALIDAÇÃO das regras DE NEGÓCIO para agendamento de consultas
-    //================================================================
-    private async Task<IActionResult?> ValidarConsulta(
-        int pacienteId,
-        int medicoId,
-        DateTime dataHora,
-        int? idIgnorar = null)
+    private IActionResult Traduzir(TipoErro tipo, string? erro) => tipo switch
     {
-        //VALIDAÇÃO do ID de paciente
-        var paciente = await _context.Pacientes.FindAsync(pacienteId);
-        if (paciente is null)
-            return BadRequest(new { mensagem = $"Paciente {pacienteId} não encontrado." });
-
-        //VALIDAÇÃO do ID de médico
-        var medico = await _context.Medicos.FindAsync(medicoId);
-        if (medico is null)
-            return BadRequest(new { mensagem = $"Médico {medicoId} não encontrado." });
-
-        //VALIDAÇÃO da data
-        if (dataHora < DateTime.Now)
-            return BadRequest(new { mensagem = "Não é possível agendar uma consulta em uma data/horário no passado." });
-
-        //VALIDAÇÃO de conflito de horário (janela de 30 minutos antes e depois da consulta)
-        var inicioJanela = dataHora.AddMinutes(-DuracaoConsultaMinutos);
-        var fimJanela = dataHora.AddMinutes(DuracaoConsultaMinutos);
-
-        //VALIDAÇÃO de conflito na agenda do médico
-        bool conflitoMedico = await _context.Consultas.AnyAsync(c =>
-            (idIgnorar == null || c.Id != idIgnorar) &&
-            c.MedicoId == medicoId &&
-            //Não utilizar >= e <= para evitar conflito de horário com consultas que iniciam ou terminam no mesmo horário
-            c.DataHora > inicioJanela &&
-            c.DataHora < fimJanela);
-
-        if (conflitoMedico)
-            return Conflict(new { mensagem = $"Este médico possui consulta em horário conflitante (intervalo mínimo de {DuracaoConsultaMinutos} minutos)." });
-
-        //VALIDAÇÃO de conflito na agenda do paciente
-        bool conflitoPaciente = await _context.Consultas.AnyAsync(c =>
-            (idIgnorar == null || c.Id != idIgnorar) &&
-            c.PacienteId == pacienteId &&
-            //Não utilizar >= e <= para evitar conflito de horário com consultas que iniciam ou terminam no mesmo horário
-            c.DataHora > inicioJanela &&
-            c.DataHora < fimJanela);
-
-        if (conflitoPaciente)
-            return Conflict(new { mensagem = $"Este paciente possui consulta em horário conflitante (intervalo mínimo de {DuracaoConsultaMinutos} minutos)." });
-
-        return null;
-    }
+        TipoErro.NaoEncontrado => NotFound(),
+        TipoErro.Invalido => BadRequest(new { mensagem = erro }),
+        TipoErro.Conflito => Conflict(new { mensagem = erro }),
+        _ => StatusCode(500)
+    };
 }
 
 /* ============================================================================
