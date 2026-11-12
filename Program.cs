@@ -1,13 +1,15 @@
 //EQUIPE: Beatrice Fischer, Gabriele Maria Freiberger, Lucas de Carvalho Ziele, Raul Schmitz, Gustavo Hreczuck
 
-using System.Text;
 using ApiClinica.Data;
+using ApiClinica.DTOs;
 using ApiClinica.Interfaces;
 using ApiClinica.Mappers;
+using ApiClinica.Models;
 using ApiClinica.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,10 +23,12 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite($"Data Source={dbPath}"));
 
+builder.Services.AddScoped<IUsuarioMapper, UsuarioMapper>();
 builder.Services.AddScoped<IPacienteMapper, PacienteMapper>();
 builder.Services.AddScoped<IMedicoMapper, MedicoMapper>();
 builder.Services.AddScoped<IConsultaMapper, ConsultaMapper>();
 
+builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IPacienteService, PacienteService>();
 builder.Services.AddScoped<IMedicoService, MedicoService>();
 builder.Services.AddScoped<IConsultaService, ConsultaService>();
@@ -77,10 +81,29 @@ app.UseHttpsRedirection();
 app.UseAuthentication(); // IMPORTANTE
 app.UseAuthorization();
 
+static async Task SetAdminUserAsync(IUsuarioService usuarioService, IConfiguration config)
+{
+    await usuarioService.CriarAsync(new UsuarioCreateDTO
+    {
+        Login = "Admin",
+        Perfil = "Admin",
+        Senha = "Admin",
+    });
+}
+
 using (var scope = app.Services.CreateScope())
 {
     var contexto = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     contexto.Database.Migrate();
+
+    var loginAdmin = app.Configuration["AdminSeed:Login"];
+
+    // Evita criar o admin de novo a cada vez que a API sobe
+    if (!await contexto.Usuarios.AnyAsync(u => u.Login == loginAdmin))
+    {
+        var usuarioService = scope.ServiceProvider.GetRequiredService<IUsuarioService>();
+        await SetAdminUserAsync(usuarioService, app.Configuration);
+    }
 }
 
 // app.Logger.LogInformation("Banco de dados em uso: {Caminho}", dbPath);

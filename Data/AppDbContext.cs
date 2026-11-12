@@ -15,5 +15,4 @@ public class AppDbContext : DbContext
     public DbSet<Consulta> Consultas { get; set; }
     public DbSet<Usuario> Usuarios { get; set; }
 
-
 }

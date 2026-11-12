@@ -1,3 +1,4 @@
+using ApiClinica.Services;
 using System;
 
 namespace ApiClinica.Models
@@ -11,5 +12,6 @@ namespace ApiClinica.Models
         public string Senha { get; set; } = string.Empty;
 
         public string Perfil { get; set; } = "usuario";
+
     }
 }
