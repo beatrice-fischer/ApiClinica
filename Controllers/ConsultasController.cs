@@ -48,7 +48,7 @@ public class ConsultasController : ControllerBase
 
     // PATCH: api/consulta
     [HttpPatch("{id}")]
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateConsulta(int id, [FromBody] ConsultaUpdateDTO dto)
     {
         var r = await _service.AtualizarAsync(id, dto);
@@ -58,7 +58,7 @@ public class ConsultasController : ControllerBase
 
     // DELETE: api/medico/id
     [HttpDelete("{id}")]
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteConsulta(int id)
     {
         var r = await _service.ExcluirAsync(id);
