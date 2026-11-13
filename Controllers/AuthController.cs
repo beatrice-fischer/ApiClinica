@@ -100,3 +100,22 @@ public class AuthController : ControllerBase
         return Ok(new { token = tokenString });
     }
 }
+
+/* ============================================================================
+ * TESTES MANUAIS — AuthController
+ * ----------------------------------------------------------------------------
+REGISTER - POST
+ {
+    "Login": "Admin",
+    "Senha": "Admin",
+    "Perfil": "admin"
+}
+AUTH - POST
+ {
+    "Login": "Admin",
+    "Senha": "Admin"
+}
+
+PATCH - token gerado -> Authorization: Bearer <token> -> Send
+
+*/
